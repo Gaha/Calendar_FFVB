@@ -5,7 +5,7 @@ import csv
 
 class Calendrier_FFVB(object):
     """
-    Génération de calendrier pour une équipe FFVB
+    Génération de calendrier (fichier .ics) pour des rencontres FFVB
     """
     def __init__(self, alerte = False):
         self.calendrier = Calendar()
@@ -15,16 +15,10 @@ class Calendrier_FFVB(object):
 
     def ajout_match(self, date = '', heure = '', equipe_A = '', equipe_B = '', salle = '', journee ='', code_match = '', alerte = False):
         """
-        journee : numero de ma journée, ex: 1
-        code_match : ex : OP1A001
-        Date: sous la forme JJ/MM/YYY
-        heure : sous la forme HH:MM
-        equipe_A
-        equipe B
-        salle
-        alerte : si on souhaite ajouter une alerte
+        Ajout d'une rencontre dans le calendrier
+        On définit la durée d'une rencontre à 2H
 
-        titre : Match EQUIPE1 / EQUIPE2
+        WARNNG : Les alertes ne fonctionent pas pour l'instant
         """
 
         titre = 'Match 🏐 %s / %s' % (equipe_A, equipe_B)
@@ -44,12 +38,15 @@ class Calendrier_FFVB(object):
             alarm = Alarm()
             alarm.add('action', 'DISPLAY')
             alarm.add('trigger', timedelta(minutes=-30))
-            alarm.add('description', 'match dans 30 minutes')
+            alarm.add('description', 'Match dans 30 minutes')
             event.add_component(alarm)
         self.calendrier.add_component(event)
 
 
     def creation_fichier(self, equipe = 'equipe'):
+        """
+        Création du fichier .ics
+        """
         if self.alerte :
             nom_fichier = '%s_alerte.ics' % (equipe)
         else:
@@ -58,16 +55,46 @@ class Calendrier_FFVB(object):
             f.write(self.calendrier.to_ical())
 
 class CSV_FFVB(object):
+    """
+    Lit le fichier CSV généré sur le site de la FFVB
+
+    Sous forme d'un dictionnaire avec les éléments suivant :
+        Entité  Code région
+        Jo      Numéro de la journée
+        Match   Code du match
+        Date    date (YYYY-MM-DD)
+        Heure   heure (HH:MM)
+        EQA_no  Numéro unique de l'équipe A
+        EQA_nom Nom de l'équipe A
+        EQB_no  Numéroe unique de l'équipe B
+        EQB_nom Nom de l'équipe B
+        Set     résultat en set (x/x)
+        Score   score des set (xx-xx,xx-xx,)
+        Total   total des points (xx-xx)
+        Salle   Gymnase
+        Arb1    Nom arbitre 1
+        Arb2    Nom arbitre 2
+
+
+    """
     def __init__(self, fichier):
         self.fichier = fichier
         self.donne= []
+        self.__parse__()
 
-    def parse(self):
+    def __parse__(self):
+        """
+        Parse le fichier
+        """
         with open(self.fichier, mode = 'r', newline='') as fichier:
             ligne = csv.DictReader(fichier, delimiter=';')
             for l in ligne :
                 self.donne.append(l)
+
     def liste_match(self, equipe):
+        """
+        Créé une liste des matchs pour une équipe
+        """
         liste_match = []
         for match in self.donne:
             if match['EQA_nom'] == equipe or match ['EQB_nom'] == equipe :
@@ -94,7 +121,6 @@ class Equipe_FFVB(object):
 
 if __name__ == "__main__":
     fichier = CSV_FFVB("ffvb_calendrier.csv")
-    fichier.parse()
     liste_match = fichier.liste_match('FLAVIGNY')
 
     cal = Calendrier_FFVB()
